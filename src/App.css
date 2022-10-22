@@ -70,14 +70,15 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  position: absolute;
-  width: 100%;
-  bottom: 0;
-  left: 0;
-  padding-bottom: 45px;
 }
 
-.twitter-logo {
+.footer-content {
+  background-color: #485164;
+  padding: 5px;
+  display: flex;
+}
+
+.github-logo {
   width: 35px;
   height: 35px;
 }
@@ -86,6 +87,7 @@
   color: white;
   font-size: 16px;
   font-weight: bold;
+  margin: 5px;
 }
 
 .gif-grid {
