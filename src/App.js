@@ -9,6 +9,8 @@ const GITHUB_LINK = `https://github.com/${GITHUB_HANDLE}`
 const App = () => {
   // State
   const [walletAddress, setWalletAddress] = useState(null);
+  const [inputValue, setInputValue] = useState("");
+  const [gifList, setGifList] = useState([]);
 
   // Ações
   const checkIfWalletIsConnected = async () => {
@@ -50,6 +52,21 @@ const App = () => {
     }
   };
 
+  const onInputChange = (event) => {
+    const { value } = event.target;
+    setInputValue(value);
+  };
+
+  const sendGif = async () => {
+    if (inputValue.length > 0) {
+      console.log("Gif link:", inputValue);
+      setGifList([...gifList, inputValue]);
+      setInputValue("");
+    } else {
+      console.log("Input vazio. Tente novamente.");
+    }
+  };
+
   const renderNotConnectedContainer = () => (
     <button
       className="cta-button connect-wallet-button"
@@ -57,6 +74,35 @@ const App = () => {
     >
       Conecte sua carteira
     </button>
+  );
+
+  const renderConnectedContainer = () => (
+    <div className="connected-container">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          sendGif();
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Entre com o link do gif!!"
+          value={inputValue}
+          onChange={onInputChange}
+        />
+        <button type="submit" className="cta-button submit-gif-button">
+          Enviar
+        </button>
+      </form>
+      <div className="gif-grid">
+        {/* Map através da 'gifList' ao invés da 'TEST_GIFS' */}
+        {gifList.map((gif) => (
+          <div className="gif-item" key={gif}>
+            <img src={gif} alt={gif} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 
   // UseEffects
@@ -78,6 +124,8 @@ const App = () => {
           <img alt="Coding Work From Home GIF By Domme Space" src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif"/>
           <p className="sub-text">Veja sua coleção de GIF do mundo Dev</p>
           {!walletAddress && renderNotConnectedContainer()}
+          {/* Precisamos apenas adicionar o inverso aqui! */}
+          {walletAddress && renderConnectedContainer()}
         </div>
         <div className="footer-container">
           <div className="footer-content">
