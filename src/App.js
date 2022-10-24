@@ -4,12 +4,15 @@ import './App.css';
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { Program, Provider, web3 } from '@project-serum/anchor';
 import idl from './idl.json';
+import kp from './keypair.json'
 
 // SystemProgram é uma referencia ao 'executor' (runtime) da Solana!
-const { SystemProgram, Keypair } = web3;
+const { SystemProgram } = web3;
 
 // Cria um par de chaves para a conta que irá guardar os dados do GIF.
-let baseAccount = Keypair.generate();
+const arr = Object.values(kp._keypair.secretKey);
+const secret = new Uint8Array(arr);
+const baseAccount = web3.Keypair.fromSecretKey(secret);
 
 // Obtém o id do nosso programa do arquivo IDL.
 const programID = new PublicKey(idl.metadata.address);
@@ -78,12 +81,27 @@ const App = () => {
   };
 
   const sendGif = async () => {
-    if (inputValue.length > 0) {
-      console.log("Gif link:", inputValue);
-      setGifList([...gifList, inputValue]);
-      setInputValue("");
-    } else {
-      console.log("Input vazio. Tente novamente.");
+    if (inputValue.length === 0) {
+      console.log("Nenhum link de GIF foi dado!")
+      return
+    }
+    setInputValue('');
+    console.log('Link do GIF:', inputValue);
+    try {
+      const provider = getProvider();
+      const program = new Program(idl, programID, provider);
+
+      await program.rpc.addGif(inputValue, {
+        accounts: {
+          baseAccount: baseAccount.publicKey,
+          user: provider.wallet.publicKey,
+        },
+      });
+      console.log("GIF enviado com sucesso para o programa", inputValue)
+
+      await getGifList();
+    } catch (error) {
+      console.log("Erro enviando GIF:", error)
     }
   };
 
@@ -102,7 +120,6 @@ const App = () => {
     }
   }
 
-
   const getProvider = () => {
     const connection = new Connection(network, opts.preflightCommitment);
     const provider = new Provider(
@@ -110,7 +127,6 @@ const App = () => {
     );
     return provider;
   }
-
 
   const renderNotConnectedContainer = () => (
     <button
@@ -123,48 +139,47 @@ const App = () => {
 
   const renderConnectedContainer = () => {
     // Se chegarmos aqui, significa que a conta do programa não foi inicializada.
-      if (gifList === null) {
-        return (
-          <div className="connected-container">
-            <button className="cta-button submit-gif-button" onClick={createGifAccount}>
-              Fazer inicialização única para conta do programa GIF
-            </button>
-          </div>
-        )
-      }
-      // Caso contrário, estamos bem! A conta existe. Usuários podem submeter GIFs.
-      else {
-        return(
-          <div className="connected-container">
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                sendGif();
-              }}
-            >
-              <input
-                type="text"
-                placeholder="Entre com o link do GIF!"
-                value={inputValue}
-                onChange={onInputChange}
-              />
-              <button type="submit" className="cta-button submit-gif-button">
-                Enviar
-              </button>
-            </form>
-            <div className="gif-grid">
-              {/* Usamos o indice (index) como chave (key), também o 'src' agora é 'item.gifLink' */}
-              {gifList.map((item, index) => (
-                <div className="gif-item" key={index}>
-                  <img src={item.gifLink} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      }
+    if (gifList === null) {
+      return (
+        <div className="connected-container">
+          <button className="cta-button submit-gif-button" onClick={createGifAccount}>
+            Fazer inicialização única para conta do programa GIF
+          </button>
+        </div>
+      )
     }
-
+    // Caso contrário, estamos bem! A conta existe. Usuários podem submeter GIFs.
+    else {
+      return(
+        <div className="connected-container">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              sendGif();
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Entre com o link do GIF!"
+              value={inputValue}
+              onChange={onInputChange}
+            />
+            <button type="submit" className="cta-button submit-gif-button">
+              Enviar
+            </button>
+          </form>
+          <div className="gif-grid">
+            {/* Usamos o indice (index) como chave (key), também o 'src' agora é 'item.gifLink' */}
+            {gifList.map((item, index) => (
+              <div className="gif-item" key={index}>
+                <img src={item.gifLink} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+  }
 
   const createGifAccount = async () => {
     try {
@@ -189,9 +204,13 @@ const App = () => {
 
   // UseEffects
   useEffect(() => {
+    const onLoad = async () => {
+      await checkIfWalletIsConnected();
+    };
+    window.addEventListener("load", onLoad);
+
     if (walletAddress) {
       console.log('Obtendo a lista de GIF...');
-
       getGifList()
     }
   }, [walletAddress]);
